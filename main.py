@@ -5,6 +5,7 @@ from langchain_community.document_loaders import WebBaseLoader
 from langchain_community.document_transformers import Html2TextTransformer
 from pydantic import BaseModel
 from typing import List
+import os
 
 app = Flask(__name__)
 
@@ -18,7 +19,7 @@ class ResearchState(BaseModel):
 # Research Agent
 def research_agent(state: ResearchState) -> dict:
     print("🔍 Researching:", state.topic)
-    tavily_tool = TavilySearchResults(k=5, tavily_api_key="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")
+    tavily_tool = TavilySearchResults(k=5, tavily_api_key=os.getenv("TAVILY_API_KEY"))
     search_results = tavily_tool.run(state.topic)
 
     if not search_results:
