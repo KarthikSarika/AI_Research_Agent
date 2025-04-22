@@ -16,10 +16,10 @@ Create an **AI system** with:
 
 ## Solution Overview
 You used:
-- **Tavily Tool**: To search the internet.
+- **Tavily Tool**: To perform real-time web searches.
 - **LangChain**: To handle language model interactions and tools.
 - **LangGraph**: To organize agent steps in a flow.
-- **Streamlit**: To create a UI for users.
+- **Flask**: To create a lightweight web app for user interaction.
 
 ---
 
@@ -27,83 +27,109 @@ You used:
 
 ### 1. Import Tools
 ```python
-from langchain... import TavilySearchResults, Chroma, OpenAIEmbeddings, RetrievalQA, OpenAI
+from flask import Flask, render_template, request
 from langgraph.graph import StateGraph
-import streamlit as st
+from langchain_community.tools import TavilySearchResults
+from langchain_community.document_loaders import WebBaseLoader
+from langchain_community.document_transformers import Html2TextTransformer
+from pydantic import BaseModel
+from typing import List
+
 ```
-You import search tools, language models, graph management, and UI tools.
+You import web framework components, graph management, search tools, document loaders, and schema validation.
 
 ---
 
-### 2. Set Up Tools
+### 2. Set Up Flask
 ```python
-tavily_tool = TavilySearchResults(k=5)
-embedding_fn = OpenAIEmbeddings()
-vectorstore = Chroma(embedding_function=embedding_fn)
-llm = OpenAI()
+app = Flask(__name__)
+
 ```
-- Tavily will search for top 5 web results.
-- Embeddings convert text to vectors (for smart search).
-- VectorStore holds all found info for easy lookup.
-- `llm` is the brain that answers your question.
+
+## 3.Define State Schema
+```python
+class ResearchState(BaseModel):
+    topic: str
+    docs: List[str] = []
+    final_answer: str = ""
+    search_results: List[str] = []
+
+```
+-Defines the shared data structure across agents.
+
+Keeps track of:
+-Search topic.
+-Collected documents.
+-Final summarized answer.
+-URLs used for research.
 
 ---
 
-### 3. Agent 1: Research Agent
+### 4. Agent 1: Research Agent
 ```python
-def research_agent(state):
-    query = state["query"]
-    results = tavily_tool.run(query)
-    docs = [{"content": r["snippet"], "metadata": {"source": r["url"]}} for r in results]
-    vectorstore.add_documents(docs)
-    return {"status": "data_collected", "query": query}
+def research_agent(state: ResearchState) -> dict:
+    tavily_tool = TavilySearchResults(k=5, tavily_api_key="...")
+    search_results = tavily_tool.run(state.topic)
+    
+    state.search_results = [result['url'] for result in search_results[:3]]
+    all_docs = []
+    for url in state.search_results:
+        loader = WebBaseLoader(url)
+        docs = loader.load()
+        text_transformer = Html2TextTransformer()
+        plain_docs = text_transformer.transform_documents(docs)
+        all_docs.extend([doc.page_content for doc in plain_docs])
+        
+    return {"docs": all_docs or ["No valid content found."], "search_results": state.search_results}
+
 ```
-- Takes user’s question.
-- Uses Tavily to get web snippets.
-- Stores those snippets in a vector database.
+-Searches the web for the topic.
+-Loads the top 3 web pages.
+-Converts HTML content to plain text.
+-Collects all readable text into documents.
 
 ---
 
-### 4. Agent 2: Answer Agent
+### 5. Agent 2: Drafting Agent
 ```python
-def answer_agent(state):
-    query = state["query"]
-    retriever = vectorstore.as_retriever()
-    qa_chain = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
-    answer = qa_chain.run(query)
-    return {"answer": answer}
+def drafting_agent(state: ResearchState) -> dict:
+    merged = "\n\n".join(state.docs)
+    answer = f"Here's a synthesized summary on the topic '{state.topic}':\n\n{merged}"
+    return {"final_answer": answer, "search_results": state.search_results}
+
 ```
-- Pulls info from the database.
-- Uses AI to write a complete answer.
+- Merges all documents.
+- Creates a final summarized answer for the user.
 
 ---
 
-### 5. LangGraph Flow
+### 6. LangGraph Flow
 ```python
-graph = StateGraph()
-graph.add_node("Research", research_agent)
-graph.add_node("Drafting", answer_agent)
-graph.set_entry_point("Research")
-graph.add_edge("Research", "Drafting")
-graph.set_finish_point("Drafting")
-final_graph = graph.compile()
+graph = StateGraph(state_schema=ResearchState)
+graph.add_node("research", research_agent)
+graph.add_node("draft", drafting_agent)
+graph.set_entry_point("research")
+graph.add_edge("research", "draft")
+graph.set_finish_point("draft")
+app_compiled = graph.compile()
 ```
 This builds the **2-step flow**:
 1. Research → 2. Draft Answer → Done
 
 ---
 
-### 6. Streamlit UI
+### 7. Flask Web UI
 ```python
-st.title("Deep Research AI Agent")
-user_query = st.text_input("Your Research Question:")
-
-if st.button("Run Agents") and user_query:
-    input_state = {"query": user_query}
-    result = final_graph.invoke(input_state)
-    st.write(result["answer"])
+@app.route("/", methods=["GET", "POST"])
+def index():
+    if request.method == "POST":
+        query = request.form["query"]
+        if query:
+            result = app_compiled.invoke({"topic": query})
+            return render_template("index.html", final_answer=result["final_answer"], search_results=result["search_results"])
+    return render_template("index.html")
 ```
 You build a simple interface:
-- User types a question.
-- Clicks a button.
-- Agents do their job and show the answer.
+- Users type a query into a form.
+- The system runs the research and drafting agents.
+- The final answer and source links are shown on the page.
