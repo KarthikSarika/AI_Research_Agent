@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Research Assistant</title>
+    <style>
+        /* Basic Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f1f6f9;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 32px;
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-family: 'Roboto', sans-serif;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            padding: 15px;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            border-color: #007bff;
+        }
+
+        button {
+            padding: 15px 30px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        /* Results Section */
+        .result, .search-results {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-results ul {
+            list-style-type: none;
+            padding-left: 0;
+        }
+
+        .search-results li {
+            background-color: #ffffff;
+            margin-bottom: 12px;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-results li a {
+            text-decoration: none;
+            color: #007bff;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+
+        .search-results li a:hover {
+            color: #0056b3;
+            text-decoration: underline;
+        }
+
+        .result pre {
+            background-color: #f7f7f7;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            color: #555;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 768px) {
+            .container {
+                width: 90%;
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 28px;
+            }
+
+            input[type="text"] {
+                font-size: 14px;
+            }
+
+            button {
+                font-size: 16px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Research Assistant</h1>
+    <div class="input-section">
+        <form method="POST" action="/">
+            <input type="text" name="query" id="query" placeholder="Enter a topic to research..." required>
+            <button type="submit" id="submit-button">Start Research</button>
+        </form>
+    </div>
+
+    {% if search_results %}
+    <div class="search-results">
+        <h3>Search Results:</h3>
+        <ul>
+            {% for result in search_results %}
+                <li><a href="{{ result }}" target="_blank">{{ result }}</a></li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if final_answer %}
+    <div class="result">
+        <h3>Final Answer:</h3>
+        <pre>{{ final_answer }}</pre>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Allow form submission when the Enter key is pressed
+    const queryInput = document.getElementById("query");
+    const submitButton = document.getElementById("submit-button");
+
+    queryInput.addEventListener("keydown", function(event) {
+        if (event.key === "Enter") {
+            submitButton.click();
+        }
+    });
+</script>
+
+</body>
+</html>
