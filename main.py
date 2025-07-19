@@ -17,7 +17,7 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 # Flask app
-app = Flask(__name__, template_folder=".")
+app = Flask(__name__)
 
 # Define LangGraph State
 class ResearchState(BaseModel):
